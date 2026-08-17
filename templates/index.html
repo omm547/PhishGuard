@@ -41,11 +41,37 @@
                         <button type="submit">Analyze URL</button>
                     </div>
                     <p id="url-help" class="form-help">
-                        Day 1 demo only. No real scanning or external checks are performed yet.
+                        Day 2 text-only analysis. PhishGuard does not open or visit the submitted URL.
                     </p>
 
-                    {% if demo_message %}
-                        <p class="demo-message" role="status">{{ demo_message }}</p>
+                    {% if analysis_result %}
+                        <div class="analysis-result" role="status">
+                            <div class="result-summary">
+                                <span class="risk-category">{{ analysis_result.category }}</span>
+                                <span class="risk-score">{{ analysis_result.score }}/100</span>
+                            </div>
+
+                            <dl class="url-details">
+                                <div>
+                                    <dt>Scheme</dt>
+                                    <dd>{{ analysis_result.details.scheme }}</dd>
+                                </div>
+                                <div>
+                                    <dt>Hostname</dt>
+                                    <dd>{{ analysis_result.details.hostname }}</dd>
+                                </div>
+                                <div>
+                                    <dt>Path</dt>
+                                    <dd>{{ analysis_result.details.path }}</dd>
+                                </div>
+                            </dl>
+
+                            <ul class="reason-list">
+                                {% for reason in analysis_result.reasons %}
+                                    <li>{{ reason }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
                     {% endif %}
                 </form>
             </div>
