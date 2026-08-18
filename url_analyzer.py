@@ -48,6 +48,12 @@ def analyze_url(url_text):
         score += 35
         reasons.append("The hostname is a direct IP address instead of a normal domain name.")
 
+    if "@" in cleaned_url:
+        score += 15
+        reasons.append(
+            "The URL contains an @ character, which can be used to make a URL look misleading."
+        )
+
     if len(cleaned_url) > LONG_URL_LENGTH:
         score += 20
         reasons.append(
