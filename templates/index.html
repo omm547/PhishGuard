@@ -27,7 +27,7 @@
                     before clicking, sharing, or entering personal information.
                 </p>
 
-                <form class="url-form" method="POST" action="{{ url_for('home') }}">
+                <form class="url-form" id="url-form" method="POST" action="{{ url_for('home') }}">
                     <label for="url">Website URL</label>
                     <div class="input-row">
                         <input
@@ -36,42 +36,97 @@
                             name="url"
                             placeholder="https://example.com"
                             value="{{ submitted_url }}"
-                            aria-describedby="url-help"
+                            required
+                            aria-describedby="url-help url-error"
                         >
-                        <button type="submit">Analyze URL</button>
+                        <button type="submit" id="analyze-button">Analyze URL</button>
                     </div>
+                    <p id="url-error" class="form-error" role="alert" hidden></p>
                     <p id="url-help" class="form-help">
                         Day 2 text-only analysis. PhishGuard does not open or visit the submitted URL.
                     </p>
+                    <p id="form-status" class="form-status" role="status" aria-live="polite" hidden></p>
+
+                    {% if error_message %}
+                        <div class="server-error" role="alert">
+                            <span class="error-icon" aria-hidden="true">!</span>
+                            <span>{{ error_message }}</span>
+                        </div>
+                    {% endif %}
 
                     {% if analysis_result %}
-                        <div class="analysis-result" role="status">
-                            <div class="result-summary">
-                                <span class="risk-category">{{ analysis_result.category }}</span>
-                                <span class="risk-score">{{ analysis_result.score }}/100</span>
+                        <section id="analysis-result" class="analysis-result" aria-labelledby="analysis-title" aria-live="polite">
+                            <div class="result-heading">
+                                <div>
+                                    <p class="result-kicker">Analysis complete</p>
+                                    <h2 id="analysis-title">URL Security Analysis</h2>
+                                </div>
+                                <span class="risk-category risk-{{ analysis_result.category|lower|replace(' ', '-') }}">
+                                    <span class="status-dot" aria-hidden="true"></span>
+                                    {{ analysis_result.category }}
+                                </span>
                             </div>
 
-                            <dl class="url-details">
-                                <div>
-                                    <dt>Scheme</dt>
-                                    <dd>{{ analysis_result.details.scheme }}</dd>
+                            <div class="score-panel">
+                                <div class="score-value"><strong>{{ analysis_result.score }}</strong><span>/ 100</span></div>
+                                <div class="score-copy">
+                                    <span class="score-label">Risk score</span>
+                                    <span class="score-note">Higher scores indicate more warning signs.</span>
                                 </div>
-                                <div>
-                                    <dt>Hostname</dt>
-                                    <dd>{{ analysis_result.details.hostname }}</dd>
+                                <div class="score-track" role="progressbar" aria-label="URL risk score" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ analysis_result.score }}">
+                                    <span style="width: {{ analysis_result.score }}%;"></span>
                                 </div>
-                                <div>
-                                    <dt>Path</dt>
-                                    <dd>{{ analysis_result.details.path }}</dd>
-                                </div>
-                            </dl>
+                            </div>
 
-                            <ul class="reason-list">
-                                {% for reason in analysis_result.reasons %}
-                                    <li>{{ reason }}</li>
-                                {% endfor %}
-                            </ul>
-                        </div>
+                            <div class="result-block">
+                                <h3>URL details</h3>
+                                <dl class="url-details">
+                                    <div>
+                                        <dt>Scheme</dt>
+                                        <dd>{{ analysis_result.details.scheme }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Hostname</dt>
+                                        <dd>{{ analysis_result.details.hostname }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Path</dt>
+                                        <dd>{{ analysis_result.details.path }}</dd>
+                                    </div>
+                                </dl>
+                            </div>
+
+                            <div class="result-block indicator-block">
+                                <div class="block-heading">
+                                    <div>
+                                        <h3>Detected Indicators</h3>
+                                        <p>Signals found during the text-only review.</p>
+                                    </div>
+                                    <span class="indicator-count">{{ analysis_result.reasons|length }}</span>
+                                </div>
+                                <ul class="reason-list">
+                                    {% for reason in analysis_result.reasons %}
+                                        <li><span class="reason-icon" aria-hidden="true">!</span><span>{{ reason }}</span></li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+
+                            <div class="recommendation">
+                                <div class="recommendation-icon" aria-hidden="true">i</div>
+                                <div>
+                                    <h3>Safety Recommendation</h3>
+                                    {% if analysis_result.category == "Low Risk" %}
+                                        <p>No basic warning signs were detected. Still, check the site name carefully and avoid entering sensitive information unless you trust the source.</p>
+                                    {% elif analysis_result.category == "Suspicious" %}
+                                        <p>Pause before opening this link. Verify who sent it, inspect the address carefully, and navigate to the organization through a trusted bookmark or official site.</p>
+                                    {% else %}
+                                        <p>Avoid opening this link or sharing information through it. If it came from a message, confirm with the sender using a separate trusted channel.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <p class="analysis-disclaimer">This result is based on current text-only checks. It is not a guaranteed determination that a website is malicious or safe.</p>
+                        </section>
                     {% endif %}
                 </form>
             </div>
@@ -133,5 +188,71 @@
     <footer class="footer">
         <p>Stay alert online: verify links, avoid rushed decisions, and never share sensitive information on websites you do not trust.</p>
     </footer>
+
+    <script>
+        (function () {
+            const form = document.getElementById("url-form");
+            const input = document.getElementById("url");
+            const button = document.getElementById("analyze-button");
+            const error = document.getElementById("url-error");
+            const status = document.getElementById("form-status");
+            const analysisResult = document.getElementById("analysis-result");
+
+            function hideStaleResult() {
+                if (analysisResult) {
+                    analysisResult.hidden = true;
+                }
+            }
+
+            function showError(message) {
+                error.textContent = message;
+                error.hidden = false;
+                input.setAttribute("aria-invalid", "true");
+            }
+
+            function clearError() {
+                error.textContent = "";
+                error.hidden = true;
+                input.removeAttribute("aria-invalid");
+                input.setCustomValidity("");
+            }
+
+            input.addEventListener("input", function () {
+                clearError();
+                hideStaleResult();
+            });
+
+            input.addEventListener("invalid", function () {
+                hideStaleResult();
+                if (!input.value.trim()) {
+                    input.setCustomValidity("Please enter a website URL to analyze.");
+                    showError("Please enter a website URL, such as https://example.com.");
+                } else if (input.validity.typeMismatch) {
+                    input.setCustomValidity("Please enter a complete URL, such as https://example.com.");
+                    showError("That doesn't look like a complete URL. Try https://example.com.");
+                }
+            });
+
+            form.addEventListener("submit", function (event) {
+                clearError();
+                hideStaleResult();
+
+                if (!input.value.trim()) {
+                    event.preventDefault();
+                    input.setCustomValidity("Please enter a website URL to analyze.");
+                    showError("Please enter a website URL, such as https://example.com.");
+                    input.focus();
+                    return;
+                }
+
+                button.disabled = true;
+                button.setAttribute("aria-disabled", "true");
+                button.classList.add("is-loading");
+                button.textContent = "Analyzing...";
+                status.textContent = "Analyzing the URL using text-only checks. Please wait.";
+                status.hidden = false;
+            });
+        }());
+    </script>
 </body>
 </html>

@@ -17,15 +17,24 @@ def home():
     """
     analysis_result = None
     submitted_url = ""
+    error_message = None
 
     if request.method == "POST":
         submitted_url = request.form.get("url", "").strip()
-        analysis_result = analyze_url(submitted_url)
+        try:
+            analysis_result = analyze_url(submitted_url)
+        except Exception:
+            app.logger.exception("Unexpected error while analyzing submitted URL")
+            error_message = (
+                "We couldn't complete the analysis right now. Please check the URL "
+                "and try again."
+            )
 
     return render_template(
         "index.html",
         analysis_result=analysis_result,
         submitted_url=submitted_url,
+        error_message=error_message,
     )
 
 
