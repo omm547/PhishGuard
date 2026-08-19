@@ -37,6 +37,8 @@
                             placeholder="https://example.com"
                             value="{{ submitted_url }}"
                             required
+                            autocomplete="url"
+                            enterkeyhint="go"
                             aria-describedby="url-help url-error"
                         >
                         <button type="submit" id="analyze-button">Analyze URL</button>
@@ -249,6 +251,7 @@
                 button.setAttribute("aria-disabled", "true");
                 button.classList.add("is-loading");
                 button.textContent = "Analyzing...";
+                form.setAttribute("aria-busy", "true");
                 status.textContent = "Analyzing the URL using text-only checks. Please wait.";
                 status.hidden = false;
             });

@@ -600,3 +600,140 @@ body {
 @media (prefers-reduced-motion: reduce) {
     .input-row button.is-loading::before { animation: none; }
 }
+
+/* Day 4 Part 3 responsive and accessibility refinements */
+html {
+    overflow-x: hidden;
+}
+
+main,
+.hero-content,
+.security-panel,
+.info-section,
+.feature-card,
+.analysis-result {
+    min-width: 0;
+}
+
+.input-row input:focus-visible,
+.input-row button:focus-visible,
+.brand:focus-visible {
+    outline: 3px solid rgba(37, 99, 235, 0.42);
+    outline-offset: 3px;
+}
+
+.input-row input:focus-visible {
+    border-color: var(--primary);
+}
+
+.score-copy,
+.recommendation > div:last-child,
+.block-heading > div:first-child {
+    min-width: 0;
+}
+
+@media (max-width: 960px) {
+    .hero {
+        gap: 20px;
+    }
+
+    .hero-content {
+        padding: 32px;
+    }
+
+    .url-details {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 760px) {
+    .hero,
+    .info-section {
+        grid-template-columns: 1fr;
+    }
+
+    .hero-content,
+    .security-panel,
+    .info-section {
+        padding: 28px;
+    }
+
+    .input-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .input-row input,
+    .input-row button {
+        width: 100%;
+    }
+
+    .url-details {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 620px) {
+    .site-header,
+    main,
+    .footer {
+        width: min(100% - 24px, 1120px);
+    }
+
+    .site-header {
+        padding-top: 20px;
+    }
+
+    .hero {
+        padding-top: 24px;
+    }
+
+    .hero-content,
+    .security-panel,
+    .info-section,
+    .feature-card {
+        padding: 22px;
+    }
+
+    .url-details {
+        grid-template-columns: 1fr;
+    }
+
+    .analysis-result {
+        padding: 20px;
+    }
+}
+
+@media (max-width: 420px) {
+    .site-header,
+    main,
+    .footer {
+        width: min(100% - 16px, 1120px);
+    }
+
+    .hero-content,
+    .security-panel,
+    .info-section,
+    .feature-card,
+    .url-form {
+        padding: 18px;
+    }
+
+    .score-panel {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .score-value {
+        grid-row: auto;
+    }
+
+    .score-track {
+        grid-column: auto;
+    }
+
+    .recommendation {
+        gap: 9px;
+        padding: 13px;
+    }
+}
