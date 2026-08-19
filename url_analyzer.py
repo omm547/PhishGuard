@@ -54,6 +54,13 @@ def analyze_url(url_text):
             "The URL contains an @ character, which can be used to make a URL look misleading."
         )
 
+    subdomain_count = _count_subdomain_labels(parsed_url.hostname)
+    if subdomain_count > 3:
+        score += 10
+        reasons.append(
+            "The hostname has many subdomain levels, so its complex structure deserves additional inspection."
+        )
+
     if len(cleaned_url) > LONG_URL_LENGTH:
         score += 20
         reasons.append(
@@ -106,6 +113,18 @@ def _hostname_is_ip_address(hostname):
         return False
 
     return True
+
+
+def _count_subdomain_labels(hostname):
+    """Count labels before the main domain, using the final two labels as the main domain."""
+    if not hostname or _hostname_is_ip_address(hostname):
+        return 0
+
+    labels = [label for label in hostname.rstrip(".").split(".") if label]
+    if len(labels) <= 2:
+        return 0
+
+    return len(labels) - 2
 
 
 def _find_suspicious_keywords(url_text):
