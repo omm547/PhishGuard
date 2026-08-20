@@ -98,6 +98,57 @@
                                 </dl>
                             </div>
 
+                            {% if analysis_result.network_info %}
+                            <div class="result-block network-block">
+                                <div class="block-heading">
+                                    <div>
+                                        <h3>Network Information</h3>
+                                        <p>Public DNS information only; this does not prove that a website is safe.</p>
+                                    </div>
+                                </div>
+                                {% if analysis_result.network_info.skipped %}
+                                    <p class="network-unavailable">{{ analysis_result.network_info.message }}</p>
+                                {% elif analysis_result.network_info.available %}
+                                    <dl class="network-details">
+                                        <div>
+                                            <dt>Hostname</dt>
+                                            <dd>{{ analysis_result.network_info.hostname }}</dd>
+                                        </div>
+                                        <div>
+                                            <dt>IPv4 addresses</dt>
+                                            <dd>
+                                                {% if analysis_result.network_info.ipv4 %}
+                                                    <ul class="address-list">
+                                                        {% for address in analysis_result.network_info.ipv4 %}
+                                                            <li>{{ address }}</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                {% else %}
+                                                    Not available
+                                                {% endif %}
+                                            </dd>
+                                        </div>
+                                        <div>
+                                            <dt>IPv6 addresses</dt>
+                                            <dd>
+                                                {% if analysis_result.network_info.ipv6 %}
+                                                    <ul class="address-list">
+                                                        {% for address in analysis_result.network_info.ipv6 %}
+                                                            <li>{{ address }}</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                {% else %}
+                                                    Not available
+                                                {% endif %}
+                                            </dd>
+                                        </div>
+                                    </dl>
+                                {% else %}
+                                    <p class="network-unavailable">DNS resolution unavailable</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+
                             <div class="result-block indicator-block">
                                 <div class="block-heading">
                                     <div>

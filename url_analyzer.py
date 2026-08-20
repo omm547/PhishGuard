@@ -1,9 +1,13 @@
 from ipaddress import ip_address
+import socket
 from urllib.parse import urlparse
 
 
 SUSPICIOUS_KEYWORDS = ("login", "verify", "account", "update", "password", "secure")
 LONG_URL_LENGTH = 75
+NETWORK_LOOKUP_SKIPPED_MESSAGE = (
+    "Network lookup skipped because the URL has elevated risk indicators."
+)
 
 
 def analyze_url(url_text):
@@ -75,6 +79,7 @@ def analyze_url(url_text):
         parsed_url=parsed_url,
         score=min(score, 100),
         reasons=reasons,
+        include_network_info=True,
     )
 
 
@@ -132,13 +137,24 @@ def _find_suspicious_keywords(url_text):
     return [keyword for keyword in SUSPICIOUS_KEYWORDS if keyword in lower_url]
 
 
-def _build_result(original_url, parsed_url, score, reasons):
+def _build_result(original_url, parsed_url, score, reasons, include_network_info=False):
+    network_info = None
+    if include_network_info:
+        # Only validated URLs reach this point. Keep DNS resolution behind the
+        # final Low Risk threshold so elevated-risk URLs never trigger lookup.
+        network_info = (
+            _network_information(parsed_url)
+            if score <= 29
+            else _skipped_network_information(parsed_url)
+        )
+
     return {
         "url": original_url,
         "score": score,
         "category": _risk_category(score),
         "reasons": reasons,
         "details": _url_details(parsed_url),
+        "network_info": network_info,
     }
 
 
@@ -164,4 +180,81 @@ def _url_details(parsed_url):
         "scheme": parsed_url.scheme or "Not available",
         "hostname": parsed_url.hostname or "Not available",
         "path": parsed_url.path or "/",
+    }
+
+
+def _network_information(parsed_url):
+    """Return public IP information without making an HTTP request."""
+    hostname = parsed_url.hostname if parsed_url else None
+    if not hostname:
+        return _unavailable_network_information()
+
+    # A literal IP is handled locally and is never passed to the DNS resolver.
+    if _hostname_is_ip_address(hostname):
+        address = ip_address(hostname)
+        if not address.is_global:
+            return _unavailable_network_information(hostname)
+
+        return {
+            "hostname": hostname,
+            "ipv4": [hostname] if address.version == 4 else [],
+            "ipv6": [hostname] if address.version == 6 else [],
+            "available": True,
+        }
+
+    try:
+        address_records = socket.getaddrinfo(
+            hostname,
+            None,
+            family=socket.AF_UNSPEC,
+            type=socket.SOCK_STREAM,
+        )
+    except (OSError, ValueError):
+        return _unavailable_network_information(hostname)
+
+    ipv4_addresses = set()
+    ipv6_addresses = set()
+    for family, _, _, _, sockaddr in address_records:
+        try:
+            address = ip_address(sockaddr[0])
+        except (IndexError, ValueError):
+            continue
+
+        # is_global excludes private, loopback, link-local, multicast,
+        # unspecified, reserved, and other non-public address ranges.
+        if not address.is_global:
+            continue
+
+        if family == socket.AF_INET and address.version == 4:
+            ipv4_addresses.add(str(address))
+        elif family == socket.AF_INET6 and address.version == 6:
+            ipv6_addresses.add(str(address))
+
+    ipv4 = sorted(ipv4_addresses)
+    ipv6 = sorted(ipv6_addresses)
+    return {
+        "hostname": hostname,
+        "ipv4": ipv4,
+        "ipv6": ipv6,
+        "available": bool(ipv4 or ipv6),
+    }
+
+
+def _unavailable_network_information(hostname="Not available"):
+    return {
+        "hostname": hostname,
+        "ipv4": [],
+        "ipv6": [],
+        "available": False,
+    }
+
+
+def _skipped_network_information(parsed_url):
+    return {
+        "hostname": parsed_url.hostname if parsed_url else "Not available",
+        "ipv4": [],
+        "ipv6": [],
+        "available": False,
+        "skipped": True,
+        "message": NETWORK_LOOKUP_SKIPPED_MESSAGE,
     }
