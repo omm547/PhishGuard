@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PhishGuard | Scan History</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header class="site-header">
+        <nav class="nav">
+            <a class="brand" href="{{ url_for('home') }}" aria-label="PhishGuard home">
+                <span class="brand-shield">PG</span><span>PhishGuard</span>
+            </a>
+            <div class="nav-actions">
+                <a class="history-link" href="{{ url_for('history') }}">Scan History</a>
+                <span class="nav-badge">Cybersecurity Awareness</span>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section class="history-page" aria-labelledby="history-title">
+            <div class="history-heading">
+                <div>
+                    <p class="eyebrow">Day 5 · Part 8</p>
+                    <h1 id="history-title">Scan History</h1>
+                    <p>Review the latest 100 URL scans stored locally by PhishGuard. No passwords, API keys, or other secrets are saved.</p>
+                </div>
+                <div class="history-icon" aria-hidden="true">H</div>
+            </div>
+
+            {% if history_error_message %}<div class="server-error" role="alert"><span class="error-icon" aria-hidden="true">!</span><span>{{ history_error_message }}</span></div>{% endif %}
+            {% if history_action_message %}<p class="history-success" role="status">{{ history_action_message }}</p>{% endif %}
+
+            <div class="history-toolbar">
+                <span>{{ history_records|length }} recent scan{{ "s" if history_records|length != 1 else "" }}</span>
+                <form method="POST" action="{{ url_for('history') }}" onsubmit="return confirm('Clear all saved scan history? This cannot be undone.');">
+                    <input type="hidden" name="action" value="clear">
+                    <button class="clear-history-button" type="submit" {% if not history_records %}disabled{% endif %}>Clear History</button>
+                </form>
+            </div>
+
+            {% if history_records %}
+                <div class="history-table-wrap">
+                    <table class="history-table">
+                        <caption class="sr-only">Recent PhishGuard scan history</caption>
+                        <thead><tr><th scope="col">Timestamp</th><th scope="col">Submitted URL</th><th scope="col">Risk Score</th><th scope="col">Category</th></tr></thead>
+                        <tbody>
+                            {% for record in history_records %}
+                                <tr>
+                                    <td>{{ record.displayed_at }}</td>
+                                    <td class="history-url">{{ record.submitted_url }}</td>
+                                    <td>{{ record.risk_score }}/100</td>
+                                    <td><span class="risk-category risk-{{ record.risk_category|lower|replace(' ', '-') }}"><span class="status-dot" aria-hidden="true"></span>{{ record.risk_category }}</span></td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="history-empty"><h2>No scans yet</h2><p>Completed URL scans will appear here newest first.</p><a class="history-primary-link" href="{{ url_for('home') }}">Analyze a URL</a></div>
+            {% endif %}
+        </section>
+    </main>
+
+    <footer class="footer"><p>Stay alert online: verify links, avoid rushed decisions, and never share sensitive information on websites you do not trust.</p></footer>
+</body>
+</html>

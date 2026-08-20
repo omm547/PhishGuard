@@ -4,6 +4,7 @@ from werkzeug.exceptions import RequestEntityTooLarge
 from batch_scanner import BatchScanError, scan_batch
 from qr_scanner import QRScanError, decode_qr_image, is_supported_url
 from safe_link_expander import LinkExpansionError, expand_short_url
+from scan_history import HistoryError, clear_history, get_recent_scans, save_scan
 from url_analyzer import analyze_url
 
 
@@ -11,6 +12,11 @@ from url_analyzer import analyze_url
 # Flask uses this object to know where the app starts.
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
+
+
+def _save_completed_scan(analysis_result):
+    """Keep history failures separate from the scan that produced the result."""
+    return save_scan(analysis_result["url"], analysis_result)
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -34,6 +40,7 @@ def home():
     batch_scan_result = None
     batch_submitted_urls = ""
     batch_error_message = None
+    history_save_error = None
 
     if request.method == "POST":
         form_type = request.form.get("form_type")
@@ -52,6 +59,8 @@ def home():
                         )
                     else:
                         qr_analysis_result = analyze_url(qr_decoded_value)
+                        if not _save_completed_scan(qr_analysis_result):
+                            history_save_error = "The QR scan completed, but it could not be added to Scan History."
                 except QRScanError as error:
                     qr_error_message = str(error)
                 except Exception:
@@ -65,6 +74,8 @@ def home():
                 expander_result = expand_short_url(expander_submitted_url)
                 if expander_result["succeeded"]:
                     expander_analysis_result = analyze_url(expander_result["final_url"])
+                    if not _save_completed_scan(expander_analysis_result):
+                        history_save_error = "The link analysis completed, but it could not be added to Scan History."
             except LinkExpansionError as error:
                 expander_error_message = str(error)
             except Exception:
@@ -76,6 +87,9 @@ def home():
             batch_submitted_urls = request.form.get("batch_urls", "")
             try:
                 batch_scan_result = scan_batch(batch_submitted_urls)
+                for item in batch_scan_result["results"]:
+                    if not _save_completed_scan(item["analysis"]):
+                        history_save_error = "The batch scan completed, but some results could not be added to Scan History."
             except BatchScanError as error:
                 batch_error_message = str(error)
             except Exception:
@@ -87,6 +101,8 @@ def home():
             submitted_url = request.form.get("url", "").strip()
             try:
                 analysis_result = analyze_url(submitted_url)
+                if not _save_completed_scan(analysis_result):
+                    history_save_error = "The scan completed, but it could not be added to Scan History."
             except Exception:
                 app.logger.exception("Unexpected error while analyzing submitted URL")
                 error_message = (
@@ -110,6 +126,34 @@ def home():
         batch_scan_result=batch_scan_result,
         batch_submitted_urls=batch_submitted_urls,
         batch_error_message=batch_error_message,
+        history_save_error=history_save_error,
+    )
+
+
+@app.route("/history", methods=["GET", "POST"])
+def history():
+    """Display or clear the recent local scan history."""
+    history_error_message = None
+    history_action_message = None
+
+    if request.method == "POST" and request.form.get("action") == "clear":
+        try:
+            clear_history()
+            history_action_message = "Scan History has been cleared."
+        except HistoryError:
+            history_error_message = "Scan History could not be cleared right now. Please try again."
+
+    try:
+        history_records = get_recent_scans()
+    except HistoryError:
+        history_records = []
+        history_error_message = "Scan History is temporarily unavailable. Please try again later."
+
+    return render_template(
+        "history.html",
+        history_records=history_records,
+        history_error_message=history_error_message,
+        history_action_message=history_action_message,
     )
 
 
@@ -132,6 +176,7 @@ def handle_large_upload(_error):
         batch_scan_result=None,
         batch_submitted_urls="",
         batch_error_message=None,
+        history_save_error=None,
     ), 413
 
 

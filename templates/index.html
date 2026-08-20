@@ -13,7 +13,10 @@
                 <span class="brand-shield">PG</span>
                 <span>PhishGuard</span>
             </a>
-            <span class="nav-badge">Cybersecurity Awareness</span>
+            <div class="nav-actions">
+                <a class="history-link" href="{{ url_for('history') }}">Scan History</a>
+                <span class="nav-badge">Cybersecurity Awareness</span>
+            </div>
         </nav>
     </header>
 
@@ -26,6 +29,9 @@
                     PhishGuard helps users learn how suspicious URLs can be reviewed
                     before clicking, sharing, or entering personal information.
                 </p>
+                {% if history_save_error %}
+                    <div class="server-error" role="status"><span class="error-icon" aria-hidden="true">!</span><span>{{ history_save_error }}</span></div>
+                {% endif %}
 
                 <form class="url-form" id="url-form" method="POST" action="{{ url_for('home') }}">
                     <label for="url">Website URL</label>
