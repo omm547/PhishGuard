@@ -98,6 +98,39 @@
                                 </dl>
                             </div>
 
+                            {% if analysis_result.domain_info %}
+                            <div class="result-block network-block">
+                                <div class="block-heading">
+                                    <div>
+                                        <h3>Domain Information</h3>
+                                        <p>Hostname parts are derived from the submitted URL; no registration or WHOIS claims are made.</p>
+                                    </div>
+                                </div>
+                                {% if analysis_result.domain_info.available %}
+                                    <dl class="network-details">
+                                        <div>
+                                            <dt>Full hostname</dt>
+                                            <dd>{{ analysis_result.domain_info.full_hostname }}</dd>
+                                        </div>
+                                        <div>
+                                            <dt>Base domain</dt>
+                                            <dd>{{ analysis_result.domain_info.base_domain }}</dd>
+                                        </div>
+                                        <div>
+                                            <dt>Subdomain</dt>
+                                            <dd>{{ analysis_result.domain_info.subdomain }}</dd>
+                                        </div>
+                                        <div>
+                                            <dt>Top-level domain</dt>
+                                            <dd>{{ analysis_result.domain_info.tld }}</dd>
+                                        </div>
+                                    </dl>
+                                {% else %}
+                                    <p class="network-unavailable">{{ analysis_result.domain_info.message }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+
                             {% if analysis_result.network_info %}
                             <div class="result-block network-block">
                                 <div class="block-heading">

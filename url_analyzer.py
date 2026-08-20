@@ -147,6 +147,7 @@ def _find_suspicious_keywords(url_text):
 def _build_result(original_url, parsed_url, score, reasons, include_network_info=False):
     network_info = None
     tls_info = None
+    domain_info = _domain_information(parsed_url) if include_network_info else None
     if include_network_info:
         # Only validated URLs reach this point. Keep DNS resolution behind the
         # final Low Risk threshold so elevated-risk URLs never trigger lookup.
@@ -172,6 +173,7 @@ def _build_result(original_url, parsed_url, score, reasons, include_network_info
         "category": _risk_category(score),
         "reasons": reasons,
         "details": _url_details(parsed_url),
+        "domain_info": domain_info,
         "network_info": network_info,
         "tls_info": tls_info,
     }
@@ -199,6 +201,50 @@ def _url_details(parsed_url):
         "scheme": parsed_url.scheme or "Not available",
         "hostname": parsed_url.hostname or "Not available",
         "path": parsed_url.path or "/",
+    }
+
+
+def _domain_information(parsed_url):
+    """Return syntactic hostname parts without making registration claims."""
+    hostname = parsed_url.hostname if parsed_url else None
+    if not hostname:
+        return _unavailable_domain_information()
+
+    if _hostname_is_ip_address(hostname):
+        return {
+            "available": True,
+            "full_hostname": hostname,
+            "base_domain": "Not applicable (IP address)",
+            "subdomain": "Not applicable",
+            "tld": "Not applicable",
+        }
+
+    labels = [label for label in hostname.rstrip(".").split(".") if label]
+    if not labels:
+        return _unavailable_domain_information()
+
+    if len(labels) == 1:
+        return {
+            "available": True,
+            "full_hostname": hostname,
+            "base_domain": labels[0],
+            "subdomain": "None",
+            "tld": "Not available",
+        }
+
+    return {
+        "available": True,
+        "full_hostname": hostname,
+        "base_domain": ".".join(labels[-2:]),
+        "subdomain": ".".join(labels[:-2]) or "None",
+        "tld": labels[-1],
+    }
+
+
+def _unavailable_domain_information():
+    return {
+        "available": False,
+        "message": "Domain information unavailable",
     }
 
 
