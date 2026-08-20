@@ -223,6 +223,59 @@
                             </div>
                             {% endif %}
 
+                            {% if analysis_result.ip_reputation %}
+                            <div class="result-block network-block">
+                                <div class="block-heading">
+                                    <div>
+                                        <h3>IP Reputation</h3>
+                                        <p>AbuseIPDB is an external signal; it is not absolute proof that a website is malicious or safe.</p>
+                                    </div>
+                                </div>
+                                {% if analysis_result.ip_reputation.available %}
+                                    <dl class="network-details">
+                                        <div>
+                                            <dt>IP address</dt>
+                                            <dd>{{ analysis_result.ip_reputation.ip_address }}</dd>
+                                        </div>
+                                        <div>
+                                            <dt>Abuse confidence score</dt>
+                                            <dd>{{ analysis_result.ip_reputation.abuse_confidence_score if analysis_result.ip_reputation.abuse_confidence_score is not none else "Not available" }}</dd>
+                                        </div>
+                                        <div>
+                                            <dt>Reported abuses</dt>
+                                            <dd>{{ analysis_result.ip_reputation.total_reports if analysis_result.ip_reputation.total_reports is not none else "Not available" }}</dd>
+                                        </div>
+                                        <div>
+                                            <dt>Country</dt>
+                                            <dd>{{ analysis_result.ip_reputation.country or "Not available" }}</dd>
+                                        </div>
+                                        <div>
+                                            <dt>ISP / network owner</dt>
+                                            <dd>{{ analysis_result.ip_reputation.isp or "Not available" }}</dd>
+                                        </div>
+                                        <div>
+                                            <dt>Last reported activity</dt>
+                                            <dd>{{ analysis_result.ip_reputation.last_reported_at or "Not available" }}</dd>
+                                        </div>
+                                        <div>
+                                            <dt>Whitelisted</dt>
+                                            <dd>
+                                                {% if analysis_result.ip_reputation.is_whitelisted is none %}
+                                                    Not available
+                                                {% elif analysis_result.ip_reputation.is_whitelisted %}
+                                                    Yes
+                                                {% else %}
+                                                    No
+                                                {% endif %}
+                                            </dd>
+                                        </div>
+                                    </dl>
+                                {% else %}
+                                    <p class="network-unavailable">{{ analysis_result.ip_reputation.message }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+
                             <div class="result-block indicator-block">
                                 <div class="block-heading">
                                     <div>

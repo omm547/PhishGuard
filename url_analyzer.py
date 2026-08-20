@@ -1,8 +1,12 @@
 from ipaddress import ip_address
+import json
+import os
 import ssl
 import socket
 import time
-from urllib.parse import urlparse
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode, urlparse
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 
 SUSPICIOUS_KEYWORDS = ("login", "verify", "account", "update", "password", "secure")
@@ -15,6 +19,8 @@ TLS_LOOKUP_SKIPPED_MESSAGE = (
 )
 TLS_HTTPS_ONLY_MESSAGE = "SSL/TLS information is only available for HTTPS URLs."
 TLS_LOOKUP_TIMEOUT_SECONDS = 5
+ABUSEIPDB_CHECK_URL = "https://api.abuseipdb.com/api/v2/check"
+ABUSEIPDB_TIMEOUT_SECONDS = 5
 
 
 def analyze_url(url_text):
@@ -148,6 +154,7 @@ def _build_result(original_url, parsed_url, score, reasons, include_network_info
     network_info = None
     tls_info = None
     domain_info = _domain_information(parsed_url) if include_network_info else None
+    ip_reputation = None
     if include_network_info:
         # Only validated URLs reach this point. Keep DNS resolution behind the
         # final Low Risk threshold so elevated-risk URLs never trigger lookup.
@@ -166,6 +173,16 @@ def _build_result(original_url, parsed_url, score, reasons, include_network_info
             )
         else:
             tls_info = _tls_information(parsed_url, network_info)
+        if score > 29:
+            ip_reputation = _unavailable_ip_reputation(
+                "IP reputation lookup skipped because the URL has elevated risk indicators."
+            )
+        elif not network_info.get("available"):
+            ip_reputation = _unavailable_ip_reputation(
+                "IP reputation lookup unavailable because no public IP address was resolved."
+            )
+        else:
+            ip_reputation = _ip_reputation_information(network_info)
 
     return {
         "url": original_url,
@@ -176,6 +193,7 @@ def _build_result(original_url, parsed_url, score, reasons, include_network_info
         "domain_info": domain_info,
         "network_info": network_info,
         "tls_info": tls_info,
+        "ip_reputation": ip_reputation,
     }
 
 
@@ -383,6 +401,73 @@ def _certificate_name(name_parts, name_key):
 
 
 def _unavailable_tls_information(message="SSL/TLS information unavailable"):
+    return {
+        "available": False,
+        "message": message,
+    }
+
+
+class _NoRedirectHandler(HTTPRedirectHandler):
+    def redirect_request(self, request, file, code, msg, headers, new_url):
+        return None
+
+
+def _ip_reputation_information(network_info):
+    """Return AbuseIPDB information for the first resolved public IP."""
+    api_key = os.environ.get("ABUSEIPDB_API_KEY")
+    if not api_key:
+        return _unavailable_ip_reputation("IP reputation lookup is not configured.")
+
+    public_ips = network_info.get("ipv4", []) + network_info.get("ipv6", [])
+    if not public_ips:
+        return _unavailable_ip_reputation(
+            "IP reputation lookup unavailable because no public IP address was resolved."
+        )
+
+    query = urlencode({"ipAddress": public_ips[0], "maxAgeInDays": 90})
+    request = Request(
+        f"{ABUSEIPDB_CHECK_URL}?{query}",
+        headers={
+            "Accept": "application/json",
+            "Key": api_key,
+        },
+        method="GET",
+    )
+
+    try:
+        opener = build_opener(_NoRedirectHandler())
+        with opener.open(request, timeout=ABUSEIPDB_TIMEOUT_SECONDS) as response:
+            payload = json.load(response)
+    except HTTPError as error:
+        if error.code == 401 or error.code == 403:
+            return _unavailable_ip_reputation(
+                "IP reputation lookup unavailable because the API key was rejected."
+            )
+        if error.code == 429:
+            return _unavailable_ip_reputation(
+                "IP reputation lookup unavailable because the API rate limit was reached."
+            )
+        return _unavailable_ip_reputation()
+    except (TimeoutError, URLError, OSError, ValueError):
+        return _unavailable_ip_reputation()
+
+    try:
+        reputation_data = payload["data"]
+        return {
+            "available": True,
+            "ip_address": reputation_data.get("ipAddress") or public_ips[0],
+            "abuse_confidence_score": reputation_data.get("abuseConfidenceScore"),
+            "total_reports": reputation_data.get("totalReports"),
+            "country": reputation_data.get("countryName") or reputation_data.get("countryCode"),
+            "isp": reputation_data.get("isp"),
+            "last_reported_at": reputation_data.get("lastReportedAt"),
+            "is_whitelisted": reputation_data.get("isWhitelisted"),
+        }
+    except (AttributeError, KeyError, TypeError):
+        return _unavailable_ip_reputation()
+
+
+def _unavailable_ip_reputation(message="IP reputation information unavailable"):
     return {
         "available": False,
         "message": message,
