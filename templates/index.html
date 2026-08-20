@@ -149,6 +149,47 @@
                             </div>
                             {% endif %}
 
+                            {% if analysis_result.tls_info %}
+                            <div class="result-block network-block">
+                                <div class="block-heading">
+                                    <div>
+                                        <h3>SSL/TLS Information</h3>
+                                        <p>A valid certificate helps protect the connection but does not prove that a website is legitimate.</p>
+                                    </div>
+                                </div>
+                                {% if analysis_result.tls_info.available %}
+                                    <dl class="network-details">
+                                        <div>
+                                            <dt>TLS status</dt>
+                                            <dd>{{ analysis_result.tls_info.status }}</dd>
+                                        </div>
+                                        <div>
+                                            <dt>Subject / common name</dt>
+                                            <dd>{{ analysis_result.tls_info.subject }}</dd>
+                                        </div>
+                                        <div>
+                                            <dt>Issuer</dt>
+                                            <dd>{{ analysis_result.tls_info.issuer }}</dd>
+                                        </div>
+                                        <div>
+                                            <dt>Valid from</dt>
+                                            <dd>{{ analysis_result.tls_info.valid_from }}</dd>
+                                        </div>
+                                        <div>
+                                            <dt>Expires</dt>
+                                            <dd>{{ analysis_result.tls_info.valid_until }}</dd>
+                                        </div>
+                                        <div>
+                                            <dt>Currently valid</dt>
+                                            <dd>{{ "Yes" if analysis_result.tls_info.currently_valid else "No" }}</dd>
+                                        </div>
+                                    </dl>
+                                {% else %}
+                                    <p class="network-unavailable">{{ analysis_result.tls_info.message }}</p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+
                             <div class="result-block indicator-block">
                                 <div class="block-heading">
                                     <div>
