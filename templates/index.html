@@ -394,6 +394,76 @@
             {% endif %}
         </section>
 
+        <section class="expander-section" aria-labelledby="expander-title">
+            <div class="expander-heading">
+                <div>
+                    <p class="eyebrow">Day 5 · Part 6</p>
+                    <h2 id="expander-title">Safe Link Expander</h2>
+                    <p>
+                        Check where a supported shortened URL leads without opening the
+                        destination in your browser. PhishGuard follows at most five
+                        safe, header-only redirects.
+                    </p>
+                </div>
+                <div class="expander-icon" aria-hidden="true">↗</div>
+            </div>
+
+            <form class="expander-form" id="expander-form" method="POST" action="{{ url_for('home') }}">
+                <input type="hidden" name="form_type" value="expander">
+                <label for="expander-url">Shortened URL</label>
+                <div class="expander-input-row">
+                    <input type="url" id="expander-url" name="expander_url" placeholder="https://bit.ly/example" value="{{ expander_submitted_url }}" required autocomplete="url" aria-describedby="expander-help expander-error">
+                    <button type="submit" id="expand-button">Expand Link</button>
+                </div>
+                <p id="expander-help" class="form-help">Supported shorteners are checked against a small known list. The website page is never rendered, downloaded, or visited.</p>
+                <p id="expander-error" class="form-error" role="alert" {% if not expander_error_message %}hidden{% endif %}>{{ expander_error_message or "" }}</p>
+                <p id="expander-status" class="form-status" role="status" aria-live="polite" hidden></p>
+            </form>
+
+            {% if expander_result %}
+                <section class="expander-result" aria-labelledby="expander-result-title" aria-live="polite">
+                    <div class="result-heading">
+                        <div>
+                            <p class="result-kicker">Expansion report</p>
+                            <h2 id="expander-result-title">Safe Link Result</h2>
+                        </div>
+                        <span class="expander-status-badge {{ 'success' if expander_result.succeeded else 'notice' }}">{{ 'Succeeded' if expander_result.succeeded else 'Not expanded' }}</span>
+                    </div>
+
+                    <dl class="expander-summary">
+                        <div><dt>Original URL</dt><dd>{{ expander_result.original_url }}</dd></div>
+                        <div><dt>Final URL</dt><dd>{{ expander_result.final_url }}</dd></div>
+                        <div><dt>Number of redirects</dt><dd>{{ expander_result.redirect_count }}</dd></div>
+                        <div><dt>Expansion succeeded</dt><dd>{{ "Yes" if expander_result.succeeded else "No" }}</dd></div>
+                    </dl>
+
+                    <div class="result-block redirect-block">
+                        <div class="block-heading"><div><h3>Redirect Chain</h3><p>Each destination was checked before the next request.</p></div></div>
+                        <ol class="redirect-chain">
+                            {% for redirect_url in expander_result.redirect_chain %}<li><span class="chain-step">{{ loop.index }}</span><span>{{ redirect_url }}</span></li>{% endfor %}
+                        </ol>
+                    </div>
+                    <p class="expander-message">{{ expander_result.message }}</p>
+
+                    {% if expander_analysis_result %}
+                        <div class="expander-analysis">
+                            <div class="result-heading">
+                                <div><p class="result-kicker">Text-only review</p><h3>Final URL Analysis</h3></div>
+                                <span class="risk-category risk-{{ expander_analysis_result.category|lower|replace(' ', '-') }}"><span class="status-dot" aria-hidden="true"></span>{{ expander_analysis_result.category }}</span>
+                            </div>
+                            <div class="score-panel">
+                                <div class="score-value"><strong>{{ expander_analysis_result.score }}</strong><span>/ 100</span></div>
+                                <div class="score-copy"><span class="score-label">Risk score</span><span class="score-note">Expansion success does not mean this URL is safe.</span></div>
+                                <div class="score-track" role="progressbar" aria-label="Expanded URL risk score" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ expander_analysis_result.score }}"><span style="width: {{ expander_analysis_result.score }}%;"></span></div>
+                            </div>
+                            <div class="result-block indicator-block"><div class="block-heading"><div><h3>Detected Indicators</h3><p>Signals found by the existing URL analyzer.</p></div><span class="indicator-count">{{ expander_analysis_result.reasons|length }}</span></div><ul class="reason-list">{% for reason in expander_analysis_result.reasons %}<li><span class="reason-icon" aria-hidden="true">!</span><span>{{ reason }}</span></li>{% endfor %}</ul></div>
+                            <p class="analysis-disclaimer">This is a text-based safety review. PhishGuard does not guarantee that the expanded website is safe.</p>
+                        </div>
+                    {% endif %}
+                </section>
+            {% endif %}
+        </section>
+
         <section class="info-section" aria-labelledby="how-title">
             <div class="section-heading">
                 <p class="eyebrow">How it helps</p>
@@ -525,6 +595,32 @@
                 button.textContent = "Scanning...";
                 form.setAttribute("aria-busy", "true");
                 status.textContent = "Decoding the QR image locally. Please wait.";
+                status.hidden = false;
+            });
+        }());
+
+        (function () {
+            const form = document.getElementById("expander-form");
+            const input = document.getElementById("expander-url");
+            const button = document.getElementById("expand-button");
+            const error = document.getElementById("expander-error");
+            const status = document.getElementById("expander-status");
+            if (!form || !input) return;
+
+            form.addEventListener("submit", function (event) {
+                error.hidden = true;
+                if (!input.value.trim()) {
+                    event.preventDefault();
+                    error.textContent = "Please enter a shortened HTTP or HTTPS URL.";
+                    error.hidden = false;
+                    input.focus();
+                    return;
+                }
+                button.disabled = true;
+                button.classList.add("is-loading");
+                button.textContent = "Expanding...";
+                form.setAttribute("aria-busy", "true");
+                status.textContent = "Checking the redirect chain safely. Please wait.";
                 status.hidden = false;
             });
         }());

@@ -2,6 +2,7 @@ from flask import Flask, render_template, request
 from werkzeug.exceptions import RequestEntityTooLarge
 
 from qr_scanner import QRScanError, decode_qr_image, is_supported_url
+from safe_link_expander import LinkExpansionError, expand_short_url
 from url_analyzer import analyze_url
 
 
@@ -25,9 +26,14 @@ def home():
     qr_error_message = None
     qr_filename = ""
     qr_decoded_value = ""
+    expander_result = None
+    expander_analysis_result = None
+    expander_error_message = None
+    expander_submitted_url = ""
 
     if request.method == "POST":
-        if request.form.get("form_type") == "qr":
+        form_type = request.form.get("form_type")
+        if form_type == "qr":
             uploaded_file = request.files.get("qr_image")
             qr_filename = uploaded_file.filename if uploaded_file else ""
             if not uploaded_file or not uploaded_file.filename:
@@ -49,6 +55,19 @@ def home():
                     qr_error_message = (
                         "We couldn't complete the QR scan. Please try a valid, clearer image."
                     )
+        elif form_type == "expander":
+            expander_submitted_url = request.form.get("expander_url", "").strip()
+            try:
+                expander_result = expand_short_url(expander_submitted_url)
+                if expander_result["succeeded"]:
+                    expander_analysis_result = analyze_url(expander_result["final_url"])
+            except LinkExpansionError as error:
+                expander_error_message = str(error)
+            except Exception:
+                app.logger.exception("Unexpected error while expanding submitted link")
+                expander_error_message = (
+                    "We couldn't complete the link expansion. Please check the URL and try again."
+                )
         else:
             submitted_url = request.form.get("url", "").strip()
             try:
@@ -69,6 +88,10 @@ def home():
         qr_error_message=qr_error_message,
         qr_filename=qr_filename,
         qr_decoded_value=qr_decoded_value,
+        expander_result=expander_result,
+        expander_analysis_result=expander_analysis_result,
+        expander_error_message=expander_error_message,
+        expander_submitted_url=expander_submitted_url,
     )
 
 
@@ -84,6 +107,10 @@ def handle_large_upload(_error):
         qr_error_message="That image is too large. Please upload an image under 5 MB.",
         qr_filename="",
         qr_decoded_value="",
+        expander_result=None,
+        expander_analysis_result=None,
+        expander_error_message=None,
+        expander_submitted_url="",
     ), 413
 
 
