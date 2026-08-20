@@ -464,6 +464,63 @@
             {% endif %}
         </section>
 
+        <section class="batch-section" aria-labelledby="batch-title">
+            <div class="batch-heading">
+                <div>
+                    <p class="eyebrow">Day 5 · Part 7</p>
+                    <h2 id="batch-title">Batch URL Scanner</h2>
+                    <p>Paste up to 20 HTTP or HTTPS URLs, one per line. Each address is reviewed with the existing text-only analyzer and is never opened, visited, crawled, or downloaded.</p>
+                </div>
+                <div class="batch-icon" aria-hidden="true">20</div>
+            </div>
+
+            <form class="batch-form" id="batch-form" method="POST" action="{{ url_for('home') }}">
+                <input type="hidden" name="form_type" value="batch">
+                <label for="batch-urls">URLs to scan</label>
+                <textarea id="batch-urls" name="batch_urls" rows="7" placeholder="https://example.com&#10;https://account.example.org/login" required aria-describedby="batch-help batch-error">{{ batch_submitted_urls }}</textarea>
+                <div class="batch-submit-row">
+                    <p id="batch-help" class="form-help">Maximum 20 non-empty lines. Invalid lines are reported individually.</p>
+                    <button type="submit" id="batch-scan-button">Scan Batch</button>
+                </div>
+                <p id="batch-error" class="form-error" role="alert" {% if not batch_error_message %}hidden{% endif %}>{{ batch_error_message or "" }}</p>
+                <p id="batch-status" class="form-status" role="status" aria-live="polite" hidden></p>
+            </form>
+
+            {% if batch_scan_result %}
+                <section class="batch-result" aria-labelledby="batch-result-title" aria-live="polite">
+                    <div class="result-heading">
+                        <div><p class="result-kicker">Batch scan complete</p><h2 id="batch-result-title">URL Risk Results</h2></div>
+                        <span class="batch-count">{{ batch_scan_result.results|length }} of {{ batch_scan_result.total_count }} scanned</span>
+                    </div>
+                    {% if batch_scan_result.errors %}
+                        <div class="batch-errors" role="alert">
+                            <h3>Lines needing attention</h3>
+                            <ul>{% for error in batch_scan_result.errors %}<li><strong>Line {{ error.line_number }}</strong>{% if error.url %} ({{ error.url }}){% endif %}: {{ error.message }}</li>{% endfor %}</ul>
+                        </div>
+                    {% endif %}
+                    {% if batch_scan_result.results %}
+                        <div class="batch-table-wrap">
+                            <table class="batch-table">
+                                <caption class="sr-only">Batch URL risk scan results</caption>
+                                <thead><tr><th scope="col">URL</th><th scope="col">Risk Score</th><th scope="col">Category</th><th scope="col">Main Indicators</th></tr></thead>
+                                <tbody>
+                                    {% for item in batch_scan_result.results %}
+                                        <tr>
+                                            <td class="batch-url">{{ item.url }}{% if item.duplicate_of %}<span class="duplicate-note">Duplicate of line {{ item.duplicate_of }}</span>{% endif %}</td>
+                                            <td>{{ item.analysis.score }}/100</td>
+                                            <td><span class="risk-category risk-{{ item.analysis.category|lower|replace(' ', '-') }}"><span class="status-dot" aria-hidden="true"></span>{{ item.analysis.category }}</span></td>
+                                            <td>{{ item.analysis.reasons|join('; ') }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endif %}
+                    <p class="analysis-disclaimer">Results come from text-based checks. Low Risk entries retain the existing safe DNS/IP and SSL/TLS checks; Suspicious and High Risk entries skip those lookups.</p>
+                </section>
+            {% endif %}
+        </section>
+
         <section class="info-section" aria-labelledby="how-title">
             <div class="section-heading">
                 <p class="eyebrow">How it helps</p>

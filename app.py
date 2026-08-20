@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request
 from werkzeug.exceptions import RequestEntityTooLarge
 
+from batch_scanner import BatchScanError, scan_batch
 from qr_scanner import QRScanError, decode_qr_image, is_supported_url
 from safe_link_expander import LinkExpansionError, expand_short_url
 from url_analyzer import analyze_url
@@ -30,6 +31,9 @@ def home():
     expander_analysis_result = None
     expander_error_message = None
     expander_submitted_url = ""
+    batch_scan_result = None
+    batch_submitted_urls = ""
+    batch_error_message = None
 
     if request.method == "POST":
         form_type = request.form.get("form_type")
@@ -68,6 +72,17 @@ def home():
                 expander_error_message = (
                     "We couldn't complete the link expansion. Please check the URL and try again."
                 )
+        elif form_type == "batch":
+            batch_submitted_urls = request.form.get("batch_urls", "")
+            try:
+                batch_scan_result = scan_batch(batch_submitted_urls)
+            except BatchScanError as error:
+                batch_error_message = str(error)
+            except Exception:
+                app.logger.exception("Unexpected error while scanning the URL batch")
+                batch_error_message = (
+                    "We couldn't complete the batch scan right now. Please check the submitted lines and try again."
+                )
         else:
             submitted_url = request.form.get("url", "").strip()
             try:
@@ -92,6 +107,9 @@ def home():
         expander_analysis_result=expander_analysis_result,
         expander_error_message=expander_error_message,
         expander_submitted_url=expander_submitted_url,
+        batch_scan_result=batch_scan_result,
+        batch_submitted_urls=batch_submitted_urls,
+        batch_error_message=batch_error_message,
     )
 
 
@@ -111,6 +129,9 @@ def handle_large_upload(_error):
         expander_analysis_result=None,
         expander_error_message=None,
         expander_submitted_url="",
+        batch_scan_result=None,
+        batch_submitted_urls="",
+        batch_error_message=None,
     ), 413
 
 

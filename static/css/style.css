@@ -190,6 +190,33 @@ h1 {
     line-height: 1.5;
 }
 
+.batch-section { margin: 28px 0; padding: 30px; background: rgba(255,255,255,.9); border: 1px solid rgba(217,225,236,.9); border-radius: 8px; box-shadow: var(--shadow); }
+.batch-heading, .batch-submit-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.batch-heading h2 { margin: 0; }
+.batch-heading p:not(.eyebrow) { max-width: 720px; color: var(--muted); line-height: 1.6; }
+.batch-icon { display: grid; place-items: center; min-width: 54px; height: 54px; color: #fff; font-weight: 800; border-radius: 50%; background: linear-gradient(160deg, var(--primary), var(--accent)); }
+.batch-form { margin-top: 22px; padding: 20px; border: 1px solid var(--line); border-radius: 8px; background: #f9fbfe; }
+.batch-form label { display: block; margin-bottom: 10px; font-weight: 800; }
+.batch-form textarea { display: block; width: 100%; min-height: 150px; padding: 14px 16px; color: var(--ink); font: inherit; line-height: 1.5; border: 1px solid #c9d4e2; border-radius: 6px; resize: vertical; }
+.batch-form textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(15,118,110,.14); }
+.batch-submit-row { align-items: center; }
+.batch-submit-row .form-help { margin-bottom: 0; }
+.batch-submit-row button { min-height: 46px; padding: 0 20px; color: #fff; font-weight: 800; border: 0; border-radius: 6px; cursor: pointer; background: var(--primary); }
+.batch-submit-row button:hover { background: var(--primary-dark); }
+.batch-result { margin-top: 14px; padding: 18px; border: 1px solid rgba(37,99,235,.22); border-radius: 6px; background: #fff; }
+.batch-count { color: var(--muted); font-weight: 700; }
+.batch-errors { margin: 16px 0; padding: 14px 18px; color: #7c2d12; border: 1px solid #fed7aa; border-radius: 6px; background: #fff7ed; }
+.batch-errors h3 { margin: 0 0 8px; font-size: 1rem; }
+.batch-errors ul { margin: 0; padding-left: 20px; line-height: 1.6; }
+.batch-table-wrap { overflow-x: auto; }
+.batch-table { width: 100%; min-width: 720px; border-collapse: collapse; font-size: .92rem; }
+.batch-table th, .batch-table td { padding: 12px 10px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+.batch-table th { color: var(--muted); font-size: .78rem; text-transform: uppercase; }
+.batch-url { max-width: 260px; overflow-wrap: anywhere; }
+.duplicate-note { display: block; margin-top: 5px; color: var(--muted); font-size: .78rem; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+@media (max-width: 620px) { .batch-section { padding: 20px; } .batch-heading, .batch-submit-row { flex-direction: column; } .batch-submit-row button { width: 100%; } }
+
 .analysis-result {
     margin-top: 14px;
     padding: 16px;
