@@ -326,6 +326,74 @@
             </aside>
         </section>
 
+        <section class="qr-section" aria-labelledby="qr-title">
+            <div class="qr-heading">
+                <div>
+                    <p class="eyebrow">Day 5 · Part 5</p>
+                    <h2 id="qr-title">QR Safety Scanner</h2>
+                    <p>
+                        Upload a QR image and PhishGuard will decode it locally, then
+                        review a supported URL with the same analyzer used above.
+                    </p>
+                </div>
+                <div class="qr-icon" aria-hidden="true">QR</div>
+            </div>
+
+            <form class="qr-form" id="qr-form" method="POST" action="{{ url_for('home') }}" enctype="multipart/form-data">
+                <input type="hidden" name="form_type" value="qr">
+                <label for="qr-image">QR code image</label>
+                <div class="qr-upload-row">
+                    <input type="file" id="qr-image" name="qr_image" accept="image/*" required aria-describedby="qr-help qr-error">
+                    <button type="submit" id="qr-scan-button">Scan QR Code</button>
+                </div>
+                <p id="qr-help" class="form-help">Images up to 5 MB are supported. The decoded website is analyzed but never visited, opened, crawled, redirected to, or downloaded.</p>
+                <p id="qr-error" class="form-error" role="alert" {% if not qr_error_message %}hidden{% endif %}>{{ qr_error_message or "" }}</p>
+                <p id="qr-status" class="form-status" role="status" aria-live="polite" hidden></p>
+            </form>
+
+            {% if qr_filename or qr_analysis_result %}
+                <section class="qr-result" aria-labelledby="qr-result-title" aria-live="polite">
+                    <div class="result-heading">
+                        <div>
+                            <p class="result-kicker">QR scan complete</p>
+                            <h2 id="qr-result-title">QR Safety Result</h2>
+                        </div>
+                        {% if qr_analysis_result %}
+                            <span class="risk-category risk-{{ qr_analysis_result.category|lower|replace(' ', '-') }}">
+                                <span class="status-dot" aria-hidden="true"></span>{{ qr_analysis_result.category }}
+                            </span>
+                        {% endif %}
+                    </div>
+                    <dl class="qr-summary">
+                        <div><dt>Uploaded image</dt><dd>{{ qr_filename }}</dd></div>
+                        <div><dt>Decoded content</dt><dd>{{ qr_decoded_value or "No supported URL decoded" }}</dd></div>
+                    </dl>
+
+                    {% if qr_analysis_result %}
+                        <div class="score-panel">
+                            <div class="score-value"><strong>{{ qr_analysis_result.score }}</strong><span>/ 100</span></div>
+                            <div class="score-copy"><span class="score-label">Risk score</span><span class="score-note">The same PhishGuard URL scoring rules were used.</span></div>
+                            <div class="score-track" role="progressbar" aria-label="QR decoded URL risk score" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ qr_analysis_result.score }}"><span style="width: {{ qr_analysis_result.score }}%;"></span></div>
+                        </div>
+                        <div class="result-block indicator-block">
+                            <div class="block-heading"><div><h3>Detected Indicators</h3><p>Signals found in the decoded URL.</p></div><span class="indicator-count">{{ qr_analysis_result.reasons|length }}</span></div>
+                            <ul class="reason-list">
+                                {% for reason in qr_analysis_result.reasons %}<li><span class="reason-icon" aria-hidden="true">!</span><span>{{ reason }}</span></li>{% endfor %}
+                            </ul>
+                        </div>
+                        <div class="recommendation">
+                            <div class="recommendation-icon" aria-hidden="true">i</div>
+                            <div><h3>Safety Recommendation</h3>
+                                {% if qr_analysis_result.category == "Low Risk" %}<p>No basic warning signs were detected. Still, verify the source before visiting or sharing information.</p>
+                                {% elif qr_analysis_result.category == "Suspicious" %}<p>Pause before opening this QR destination. Verify who provided it and inspect the decoded address carefully.</p>
+                                {% else %}<p>Avoid opening this QR destination or sharing information through it. Confirm the source through a separate trusted channel.</p>{% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+                </section>
+            {% endif %}
+        </section>
+
         <section class="info-section" aria-labelledby="how-title">
             <div class="section-heading">
                 <p class="eyebrow">How it helps</p>
@@ -431,6 +499,32 @@
                 button.textContent = "Analyzing...";
                 form.setAttribute("aria-busy", "true");
                 status.textContent = "Analyzing the URL using text-only checks. Please wait.";
+                status.hidden = false;
+            });
+        }());
+
+        (function () {
+            const form = document.getElementById("qr-form");
+            const input = document.getElementById("qr-image");
+            const button = document.getElementById("qr-scan-button");
+            const error = document.getElementById("qr-error");
+            const status = document.getElementById("qr-status");
+            if (!form || !input) return;
+
+            form.addEventListener("submit", function (event) {
+                error.hidden = true;
+                if (!input.files.length) {
+                    event.preventDefault();
+                    error.textContent = "Please choose an image containing a QR code.";
+                    error.hidden = false;
+                    input.focus();
+                    return;
+                }
+                button.disabled = true;
+                button.classList.add("is-loading");
+                button.textContent = "Scanning...";
+                form.setAttribute("aria-busy", "true");
+                status.textContent = "Decoding the QR image locally. Please wait.";
                 status.hidden = false;
             });
         }());
